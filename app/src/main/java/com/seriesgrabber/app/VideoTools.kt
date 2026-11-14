@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
@@ -71,8 +72,10 @@ object VideoMerger {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val outputFile = File(outputDir, "SeriesGrabber_$stamp.mp4")
         val clips = uris.map { uri -> EditedMediaItem.Builder(MediaItem.fromUri(uri)).build() }
-        val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(clips)
-        val composition = Composition.Builder(sequence).build()
+        val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_VIDEO))
+            .addItems(clips)
+            .build()
+        val composition = Composition.Builder(listOf(sequence)).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
