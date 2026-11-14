@@ -95,8 +95,8 @@ class TikTokDiscoveryActivity : ComponentActivity() {
                                                   let u=a.href;
                                                   if(!u || !u.includes('tiktok.com')) return;
                                                   let type=null;
-                                                  if(/\\/video\\//.test(u)) type='episode';
-                                                  else if(/\\/(series|collection)\\//i.test(u) || /series/i.test(a.innerText||'')) type='series';
+                                                  if(/\/video\//.test(u)) type='episode';
+                                                  else if(/\/(series|collection)\//i.test(u) || /series/i.test(a.innerText||'')) type='series';
                                                   if(type) seen[u.split('?')[0]]={url:u.split('?')[0],type:type};
                                                 });
                                                 window.scrollBy(0, Math.max(window.innerHeight*0.85,500));
