@@ -72,9 +72,7 @@ object VideoMerger {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val outputFile = File(outputDir, "SeriesGrabber_$stamp.mp4")
         val clips = uris.map { uri -> EditedMediaItem.Builder(MediaItem.fromUri(uri)).build() }
-        val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_VIDEO))
-            .addItems(clips)
-            .build()
+        val sequence = EditedMediaItemSequence.Builder(clips).build()
         val composition = Composition.Builder(listOf(sequence)).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
