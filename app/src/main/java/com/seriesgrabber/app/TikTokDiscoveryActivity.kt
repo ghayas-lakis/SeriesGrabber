@@ -59,9 +59,10 @@ class TikTokDiscoveryActivity : ComponentActivity() {
                                 settings.domStorageEnabled = true
                                 settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36"
                                 webChromeClient = WebChromeClient()
+                                val scannerView = this
                                 addJavascriptInterface(object {
                                     @JavascriptInterface fun report(json: String, done: Boolean) {
-                                        post {
+                                        scannerView.post {
                                             val parsed = runCatching {
                                                 val array = JSONArray(json)
                                                 (0 until array.length()).mapNotNull { i ->
