@@ -113,6 +113,30 @@ class TikTokDiscoveryActivity : Activity() {
                 }
             }, "SeriesGrabberBridge")
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    val target = request.url.toString()
+                    if (target.startsWith("http://", ignoreCase = true) ||
+                        target.startsWith("https://", ignoreCase = true)) return false
+
+                    // TikTok short links may redirect to the app-only snssdk scheme.
+                    // Keep the user in WebView by opening the public video embed.
+                    if (target.startsWith("snssdk://", ignoreCase = true)) {
+                        val videoId = Regex("/(?:aweme/)?detail/(\\d+)", RegexOption.IGNORE_CASE)
+                            .find(target)?.groupValues?.getOrNull(1)
+                        if (!videoId.isNullOrBlank()) {
+                            statusText.text = "TikTok redirected to its app link. Opening the web video player…"
+                            view.loadUrl("https://www.tiktok.com/embed/v2/$videoId")
+                        } else {
+                            scanning = false
+                            findButton.isEnabled = true
+                            findButton.text = "FIND SERIES AND EPISODES"
+                            statusText.text = "TikTok redirected to an app-only link. Please paste the full www.tiktok.com video URL instead of the shortened link."
+                        }
+                        return true
+                    }
+                    return true
+                }
+
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     super.onPageStarted(view, url, favicon)
                     statusText.text = "Loading TikTok page…"
