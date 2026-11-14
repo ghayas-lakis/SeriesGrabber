@@ -116,7 +116,7 @@ class TikTokDiscoveryActivity : ComponentActivity() {
                                 }
                             }
                         },
-                        modifier = Modifier.size(1.dp)
+                        modifier = Modifier.fillMaxWidth().height(180.dp)
                     )
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
                         items(links, key = { it.url }) { item ->
