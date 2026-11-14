@@ -61,7 +61,7 @@ class TikTokDiscoveryActivity : Activity() {
         urlInput = EditText(this).apply {
             hint = "Paste TikTok link here"
             textSize = 16f
-            singleLine = true
+            setSingleLine(true)
             setText(intent.getStringExtra("url") ?: intent.getStringExtra("android.intent.extra.TEXT") ?: "")
             setTextColor(Color.BLACK)
             setHintTextColor(Color.DKGRAY)
