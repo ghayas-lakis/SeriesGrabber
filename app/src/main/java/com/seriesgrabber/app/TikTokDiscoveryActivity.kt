@@ -124,7 +124,7 @@ class TikTokDiscoveryActivity : ComponentActivity() {
                                     Text(if (item.type == "series") "Series / collection" else "Episode", style = MaterialTheme.typography.titleSmall)
                                     Text(item.url, style = MaterialTheme.typography.bodySmall)
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { input = item.url; links = emptyList(); scanning = true; status = "Opening selected series…"; webView?.loadUrl(item.url) }) { Text("Scan this link") }
+                                        TextButton(onClick = { input = item.url; links = emptyList(); scanning = true; status = "Opening selected series…"; webView?.apply { tag = "scanning"; loadUrl(item.url) } }) { Text("Scan this link") }
                                         TextButton(onClick = { android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.url)).also { startActivity(it) } }) { Text("Open") }
                                     }
                                 }
