@@ -1,188 +1,187 @@
 package com.seriesgrabber.app
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import org.json.JSONArray
 
-data class TikTokFoundLink(val url: String, val type: String)
+class TikTokDiscoveryActivity : Activity() {
+    private lateinit var urlInput: EditText
+    private lateinit var statusText: TextView
+    private lateinit var resultText: TextView
+    private lateinit var browser: WebView
+    private lateinit var findButton: Button
+    private var found = linkedMapOf<String, String>()
+    private var scanning = false
 
-class TikTokDiscoveryActivity : ComponentActivity() {
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val sharedText = intent.getStringExtra("android.intent.extra.TEXT").orEmpty()
-        setContent {
-            MaterialTheme {
-                var input by remember {
-                    mutableStateOf(intent.getStringExtra("url") ?: sharedText)
-                }
-                var status by remember { mutableStateOf("Paste a TikTok profile, series, or episode link, then tap Find.") }
-                var links by remember { mutableStateOf(listOf<TikTokFoundLink>()) }
-                var webView by remember { mutableStateOf<WebView?>(null) }
-                var scanning by remember { mutableStateOf(false) }
-                Scaffold { padding ->
-                    Column(
-                        Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("TikTok series finder", style = MaterialTheme.typography.headlineSmall)
-                        Text("One link should lead to the complete drama. Start with an episode or creator profile.")
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = { input = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("TikTok link") },
-                            placeholder = { Text("https://www.tiktok.com/@creator/...") },
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                val url = input.trim()
-                                if (!url.contains("tiktok.com", ignoreCase = true)) {
-                                    status = "Please paste a valid TikTok link."
-                                } else {
-                                    links = emptyList()
-                                    scanning = true
-                                    status = "Opening TikTok page…"
-                                    val view = webView
-                                    if (view == null) {
-                                        scanning = false
-                                        status = "Browser is still initializing. Wait a moment and tap Find again."
-                                    } else {
-                                        view.tag = "scanning"
-                                        view.loadUrl(if (url.startsWith("http")) url else "https://$url")
-                                    }
-                                }
-                            },
-                            enabled = !scanning,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (scanning) "Scanning TikTok…" else "Find series and episodes") }
 
-                        Text(status, style = MaterialTheme.typography.bodyMedium)
-                        Text("TikTok page preview", style = MaterialTheme.typography.titleSmall)
-                        AndroidView(
-                            factory = { ctx ->
-                                WebView(ctx).apply {
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.loadsImagesAutomatically = true
-                                    settings.useWideViewPort = true
-                                    settings.loadWithOverviewMode = true
-                                    settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36"
-                                    webChromeClient = WebChromeClient()
-                                    val scannerView = this
-                                    addJavascriptInterface(object {
-                                        @JavascriptInterface
-                                        fun report(json: String, done: Boolean) {
-                                            scannerView.post {
-                                                val parsed = runCatching {
-                                                    val array = JSONArray(json)
-                                                    (0 until array.length()).mapNotNull { i ->
-                                                        val obj = array.optJSONObject(i) ?: return@mapNotNull null
-                                                        val url = obj.optString("url")
-                                                        val type = obj.optString("type")
-                                                        if (url.isBlank()) null else TikTokFoundLink(url, type)
-                                                    }
-                                                }.getOrDefault(emptyList())
-                                                links = (links + parsed).distinctBy { it.url }
-                                                if (done) {
-                                                    scanning = false
-                                                    status = "Scan finished: ${links.count { it.type == "episode" }} episode links and ${links.count { it.type == "series" }} series links found."
-                                                } else {
-                                                    status = "Scanning page… ${links.size} links found."
-                                                }
-                                            }
-                                        }
-                                    }, "SeriesGrabberBridge")
-                                    webView = this
-                                    webViewClient = object : WebViewClient() {
-                                        override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
-                                            super.onPageStarted(view, url, favicon)
-                                            if (view.tag == "scanning") status = "TikTok page loading…"
-                                        }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(16))
+            setBackgroundColor(Color.WHITE)
+        }
+        val scroll = ScrollView(this)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+        }
+        scroll.addView(content)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, -1))
+        setContentView(root)
 
-                                        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                                            super.onReceivedError(view, request, error)
-                                            if (request.isForMainFrame) {
-                                                scanning = false
-                                                status = "TikTok could not load this page. Try opening the link in TikTok or Chrome, or check your connection."
-                                            }
-                                        }
+        fun label(value: String, size: Float = 16f): TextView =
+            TextView(this).apply {
+                text = value
+                textSize = size
+                setTextColor(Color.rgb(30, 30, 30))
+                setPadding(0, dp(8), 0, dp(8))
+            }
 
-                                        override fun onPageFinished(view: WebView, url: String) {
-                                            super.onPageFinished(view, url)
-                                            if (view.tag != "scanning") return
-                                            status = "Page loaded. Scrolling to reveal episode cards…"
-                                            val js = """
-                                                (function(){
-                                                  let n=0, seen={};
-                                                  function collect(){
-                                                    document.querySelectorAll('a[href]').forEach(a=>{
-                                                      let u=a.href;
-                                                      if(!u || !u.includes('tiktok.com')) return;
-                                                      let type=null;
-                                                      if(/\/video\//.test(u)) type='episode';
-                                                      else if(/\/(series|collection|playlist)\//i.test(u)) type='series';
-                                                      if(type) seen[u.split('?')[0]]={url:u.split('?')[0],type:type};
-                                                    });
-                                                    window.scrollBy(0, Math.max(window.innerHeight*0.85,500));
-                                                    n++;
-                                                    if(n<20) setTimeout(collect,1000);
-                                                    else window.SeriesGrabberBridge.report(JSON.stringify(Object.values(seen)),true);
-                                                  }
-                                                  collect();
-                                                })();
-                                            """.trimIndent()
-                                            view.evaluateJavascript(js, null)
-                                        }
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(190.dp)
-                        )
-                        Text("Found links (${links.size})", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(links, key = { it.url }) { item ->
-                                ElevatedCard(Modifier.fillMaxWidth()) {
-                                    Column(Modifier.padding(10.dp)) {
-                                        Text(if (item.type == "series") "Series / collection" else "Episode")
-                                        Text(item.url, style = MaterialTheme.typography.bodySmall)
-                                        TextButton(onClick = {
-                                            input = item.url
-                                            scanning = true
-                                            status = "Opening selected link…"
-                                            webView?.apply { tag = "scanning"; loadUrl(item.url) }
-                                        }) { Text("Scan this link") }
-                                    }
-                                }
+        content.addView(label("SeriesGrabber — TikTok series finder", 22f))
+        content.addView(label("Paste ONE TikTok episode link or a creator profile link. The app will look for the series.", 15f))
+
+        urlInput = EditText(this).apply {
+            hint = "Paste TikTok link here"
+            textSize = 16f
+            singleLine = true
+            setText(intent.getStringExtra("url") ?: intent.getStringExtra("android.intent.extra.TEXT") ?: "")
+            setTextColor(Color.BLACK)
+            setHintTextColor(Color.DKGRAY)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setBackgroundColor(Color.rgb(245, 245, 245))
+        }
+        content.addView(urlInput, LinearLayout.LayoutParams(-1, dp(56)))
+
+        findButton = Button(this).apply {
+            text = "FIND SERIES AND EPISODES"
+            textSize = 15f
+            isAllCaps = false
+            setOnClickListener { startScan() }
+        }
+        content.addView(findButton, LinearLayout.LayoutParams(-1, dp(54)))
+
+        statusText = label("Ready. Paste a TikTok link and press Find.", 15f)
+        content.addView(statusText)
+
+        content.addView(label("TikTok page preview", 17f))
+        browser = WebView(this).apply {
+            setBackgroundColor(Color.rgb(248, 248, 248))
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.loadsImagesAutomatically = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.javaScriptCanOpenWindowsAutomatically = true
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36"
+            webChromeClient = WebChromeClient()
+            addJavascriptInterface(object {
+                @JavascriptInterface fun report(json: String) {
+                    post {
+                        runCatching {
+                            val array = JSONArray(json)
+                            for (i in 0 until array.length()) {
+                                val obj = array.optJSONObject(i) ?: continue
+                                val u = obj.optString("url")
+                                val type = obj.optString("type")
+                                if (u.isNotBlank()) found[u] = type
                             }
                         }
-                        Text(
-                            "If TikTok shows a login or consent screen, complete it in the preview and tap Find again. Discovery only reads links visible on the page; downloading and merging are separate features still under development.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        scanning = false
+                        findButton.isEnabled = true
+                        findButton.text = "FIND SERIES AND EPISODES"
+                        statusText.text = "Scan finished. Found ${found.count { it.value == "episode" }} episode links and ${found.count { it.value == "series" }} series links."
+                        refreshResults()
                     }
+                }
+            }, "SeriesGrabberBridge")
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    statusText.text = "Loading TikTok page…"
+                }
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                    super.onReceivedError(view, request, error)
+                    if (request.isForMainFrame) {
+                        scanning = false
+                        findButton.isEnabled = true
+                        statusText.text = "TikTok page failed to load. Check internet, or sign in using the preview."
+                    }
+                }
+                override fun onPageFinished(view: WebView, url: String) {
+                    super.onPageFinished(view, url)
+                    if (!scanning) return
+                    statusText.text = "Page loaded. Scrolling to collect episode links…"
+                    val js = """
+                        (function(){
+                          let n=0, seen={};
+                          function collect(){
+                            document.querySelectorAll('a[href]').forEach(a=>{
+                              let u=a.href;
+                              if(!u || !u.includes('tiktok.com')) return;
+                              let type=null;
+                              if(/\/video\//.test(u)) type='episode';
+                              else if(/\/(series|collection|playlist)\//i.test(u)) type='series';
+                              if(type) seen[u.split('?')[0]]={url:u.split('?')[0],type:type};
+                            });
+                            window.scrollBy(0, Math.max(window.innerHeight*0.8,450));
+                            n++;
+                            if(n<25) setTimeout(collect,1000);
+                            else window.SeriesGrabberBridge.report(JSON.stringify(Object.values(seen)));
+                          }
+                          collect();
+                        })();
+                    """.trimIndent()
+                    view.evaluateJavascript(js, null)
                 }
             }
         }
+        content.addView(browser, LinearLayout.LayoutParams(-1, dp(360)))
+        content.addView(label("DETECTED LINKS", 18f))
+        resultText = label("No links found yet.", 14f)
+        content.addView(resultText)
+        content.addView(label("If TikTok asks for sign-in or consent, complete it in the preview, then press Find again. This prototype reads links exposed on the page; full automatic downloading and merging are not connected yet.", 13f))
+    }
+
+    private fun startScan() {
+        val url = urlInput.text.toString().trim()
+        if (!url.contains("tiktok.com", ignoreCase = true)) {
+            statusText.text = "Please paste a valid TikTok URL first."
+            return
+        }
+        found.clear()
+        refreshResults()
+        scanning = true
+        findButton.isEnabled = false
+        findButton.text = "SCANNING…"
+        statusText.text = "Opening TikTok…"
+        browser.loadUrl(if (url.startsWith("http")) url else "https://$url")
+    }
+
+    private fun refreshResults() {
+        resultText.text = if (found.isEmpty()) "No links detected. TikTok may hide links until you sign in, or its page layout may not expose episode URLs." else
+            found.entries.mapIndexed { i, e -> "${i + 1}. [${e.value}] ${e.key}" }.joinToString("\n\n")
+    }
+
+    override fun onDestroy() {
+        if (::browser.isInitialized) browser.destroy()
+        super.onDestroy()
     }
 }
