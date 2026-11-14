@@ -69,7 +69,8 @@ private fun SeriesGrabberScreen(readName: (Uri) -> String, retainAccess: (Uri) -
     Scaffold { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("SeriesGrabber", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Detect episodes, exclude adverts, and combine your selected clips.")
+            Text("Find TikTok series, organize episodes, and combine downloaded clips.")
+            OutlinedButton(onClick = { context.startActivity(Intent(context, TikTokDiscoveryActivity::class.java)) }, modifier = Modifier.fillMaxWidth()) { Text("Find TikTok series automatically") }
             Button(onClick = { picker.launch(arrayOf("video/*")) }, modifier = Modifier.fillMaxWidth()) { Text("＋  Add videos") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(enabled = videos.isNotEmpty() && !analyzing, onClick = {
