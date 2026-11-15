@@ -238,11 +238,11 @@ class TikTokDiscoveryActivity : Activity() {
               const add = (url) => {
                 try {
                   const u = new URL(url, location.href);
-                  if (!/(^|\\.)tiktok\\.com$/i.test(u.hostname)) return;
-                  if (/\\/video\\/\\d+/.test(u.pathname)) {
+                  if (!/(^|\.)tiktok\.com$/i.test(u.hostname)) return;
+                  if (/\/video\/\d+/.test(u.pathname)) {
                     u.search = ''; u.hash = '';
                     found.set(u.href, {url:u.href, type:'episode'});
-                  } else if (/\\/(series|collection|playlist)\\//i.test(u.pathname)) {
+                  } else if (/\/(series|collection|playlist)\//i.test(u.pathname)) {
                     u.search = ''; u.hash = '';
                     found.set(u.href, {url:u.href, type:'series'});
                   }
@@ -251,12 +251,12 @@ class TikTokDiscoveryActivity : Activity() {
               document.querySelectorAll('a[href]').forEach(a => add(a.href));
               const html = document.documentElement ? document.documentElement.innerHTML : '';
               const handle = (location.pathname.match(/@([^/]+)/) || [])[1];
-              const pathRe = /@([A-Za-z0-9._-]+)\\/video\\/(\\d{15,22})/g;
+              const pathRe = /@([A-Za-z0-9._-]+)\/video\/(\d{15,22})/g;
               let m;
               while ((m = pathRe.exec(html)) !== null) add('https://www.tiktok.com/@' + m[1] + '/video/' + m[2]);
               if (handle) {
                 const ids = new Set();
-                const idRe = /["'](?:id|itemId|aweme_id)["']\\s*:\\s*["'](\\d{15,22})["']/g;
+                const idRe = /["'](?:id|itemId|aweme_id)["']\s*:\s*["'](\d{15,22})["']/g;
                 while ((m = idRe.exec(html)) !== null) ids.add(m[1]);
                 ids.forEach(id => add('https://www.tiktok.com/@' + handle + '/video/' + id));
               }
