@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hint_url">Paste TikTok episode or profile link</string>
+    <string name="hint_name">Series name (optional)</string>
+    <string name="opt_marker">Detect episode markers</string>
+    <string name="opt_reverse">Reverse episode order</string>
+    <string name="start">Find series and episodes</string>
+</resources>
