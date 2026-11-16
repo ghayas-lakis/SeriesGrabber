@@ -30,5 +30,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.media3:media3-common:1.5.1")
     implementation("androidx.media3:media3-transformer:1.5.1")
+
+    // yt-dlp wrapper and FFmpeg runtime used by SeriesEngine.
+    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
