@@ -19,6 +19,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebStorage
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -172,10 +173,10 @@ class TikTokDiscoveryActivity : Activity() {
               try {
                 const u = new URL(raw, location.href);
                 if (!/^https?:$/.test(u.protocol)) return;
-                if (/(^|\\.)tiktok\\.com$/i.test(u.hostname) && /\\/video\\/\\d+/.test(u.pathname)) {
+                if (u.hostname.endsWith('tiktok.com') && u.pathname.includes('/video/')) {
                   u.search=''; u.hash=''; out.add(u.href);
                 }
-                if (u.hostname.endsWith('dailymotion.com') && /\\/video\\//.test(u.pathname)) {
+                if (u.hostname.endsWith('dailymotion.com') && u.pathname.includes('/video/')) {
                   u.search=''; u.hash=''; out.add(u.href);
                 }
               } catch(e) {}
@@ -216,7 +217,7 @@ class TikTokDiscoveryActivity : Activity() {
                 [v.currentSrc, v.src].filter(Boolean).forEach(u => {
                   try {
                     const x = new URL(u, location.href);
-                    if (/^https?:$/.test(x.protocol) && /\\.(mp4|m4v|webm|mov)$/i.test(x.pathname)) found.add(x.href);
+                    if (/^https?:$/.test(x.protocol) && ['.mp4','.m4v','.webm','.mov'].some(ext => x.pathname.toLowerCase().endsWith(ext))) found.add(x.href);
                   } catch(e) {}
                 });
                 v.querySelectorAll('source[src]').forEach(s => {
@@ -281,6 +282,7 @@ class TikTokDiscoveryActivity : Activity() {
             browser.clearHistory()
             browser.clearCache(true)
             browser.clearFormData()
+            WebStorage.getInstance().deleteAllData()
             browser.removeAllViews()
             browser.destroy()
         }
