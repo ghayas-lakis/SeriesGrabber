@@ -2,6 +2,7 @@ package com.seriesgrabber.app
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -66,7 +67,7 @@ class TikTokDiscoveryActivity : Activity() {
         }
         address = EditText(this).apply {
             hint = "Enter website or search"
-            singleLine = true
+            setSingleLine(true)
             textSize = 14f
             setTextColor(Color.BLACK)
             imeOptions = EditorInfo.IME_ACTION_GO
@@ -194,7 +195,7 @@ class TikTokDiscoveryActivity : Activity() {
                 }
                 lastScannedUrl = browser.url ?: ""
                 results.text = "Collected ${candidates.size} unique video link(s). ${if (added > 0) "$added new" else "No new"} on this scan.\n" +
-                    candidates.takeLast(8).joinToString("\n")
+                    candidates.toList().takeLast(8).joinToString("\n")
                 if (showStatus) status.text = "Page scan complete. Review the collected links before any download."
             }.onFailure {
                 if (showStatus) status.text = "This page did not expose readable video links to the browser."
