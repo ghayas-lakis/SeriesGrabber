@@ -8,6 +8,7 @@
         android:supportsRtl="true"
         android:extractNativeLibs="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".DownloadQueueActivity" android:exported="false" />
         <activity android:name=".TikTokDiscoveryActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
