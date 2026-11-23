@@ -2,6 +2,10 @@ package com.seriesgrabber.app
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
+import android.app.DownloadManager
+import android.content.Context
+import android.os.Environment
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -31,6 +35,7 @@ class TikTokDiscoveryActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var results: TextView
     private val candidates = linkedSetOf<String>()
+    private val mediaCandidates = linkedSetOf<String>()
     private var lastScannedUrl = ""
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -126,6 +131,8 @@ class TikTokDiscoveryActivity : Activity() {
         controls.addView(button("›") { if (browser.canGoForward()) browser.goForward() })
         controls.addView(button("↻") { browser.reload() })
         controls.addView(button("Detect videos") { scanPage(true) })
+        controls.addView(button("Download") { chooseAndDownload() })
+        controls.addView(button("Queue") { startActivity(Intent(this, DownloadQueueActivity::class.java)) })
         root.addView(controls)
 
         results = TextView(this).apply {
@@ -201,6 +208,70 @@ class TikTokDiscoveryActivity : Activity() {
                 if (showStatus) status.text = "This page did not expose readable video links to the browser."
             }
         }
+        // Only direct, ordinary HTTP(S) media files are offered to DownloadManager.
+        browser.evaluateJavascript("""
+            (function() {
+              const found = new Set();
+              document.querySelectorAll('video').forEach(v => {
+                [v.currentSrc, v.src].filter(Boolean).forEach(u => {
+                  try {
+                    const x = new URL(u, location.href);
+                    if (/^https?:$/.test(x.protocol) && /\\.(mp4|m4v|webm|mov)$/i.test(x.pathname)) found.add(x.href);
+                  } catch(e) {}
+                });
+                v.querySelectorAll('source[src]').forEach(s => {
+                  try {
+                    const x = new URL(s.src, location.href);
+                    if (/^https?:$/.test(x.protocol) && /\\.(mp4|m4v|webm|mov)$/i.test(x.pathname)) found.add(x.href);
+                  } catch(e) {}
+                });
+              });
+              return JSON.stringify(Array.from(found));
+            })();
+        """.trimIndent()) { raw ->
+            runCatching {
+                val json = org.json.JSONTokener(raw ?: "[]").nextValue() as String
+                val arr = JSONArray(json)
+                for (i in 0 until arr.length()) mediaCandidates.add(arr.getString(i))
+                results.text = "Episode links: ${candidates.size} • Direct media files: ${mediaCandidates.size}\n" +
+                    mediaCandidates.toList().takeLast(4).joinToString("\n")
+            }
+        }
+    }
+
+    private fun chooseAndDownload() {
+        val files = mediaCandidates.toList()
+        if (files.isEmpty()) {
+            status.text = "No direct downloadable video file was exposed by this page. A TikTok video page link is not itself a media file."
+            return
+        }
+        val checked = BooleanArray(files.size) { true }
+        val labels = files.mapIndexed { i, u -> "Video ${i + 1}: ${Uri.parse(u).lastPathSegment ?: "media"}" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose videos to download")
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton("Download selected") { _, _ ->
+                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                var count = 0
+                files.forEachIndexed { i, url ->
+                    if (checked[i]) runCatching {
+                        val path = Uri.parse(url).lastPathSegment ?: "video.mp4"
+                        val name = "SeriesGrabber_${System.currentTimeMillis()}_$path"
+                        val req = DownloadManager.Request(Uri.parse(url))
+                            .setTitle(name)
+                            .setDescription("SeriesGrabber video download")
+                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                            .setAllowedOverMetered(true)
+                            .setAllowedOverRoaming(false)
+                            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "SeriesGrabber/$name")
+                        dm.enqueue(req)
+                        count++
+                    }
+                }
+                status.text = "$count download(s) queued. Use Queue to monitor progress."
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroy() {
